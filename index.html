@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クロコ導入 概算見積もり</title>
+  <style>
+    :root {
+      --orange: #DA7756;
+      --orange-light: #f5e6e0;
+      --orange-dark: #c0614a;
+      --green: #4CAF50;
+      --gray-bg: #f7f7f7;
+      --border: #e0e0e0;
+      --text: #333;
+      --text-light: #777;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Meiryo", sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--orange);
+      color: white;
+      padding: 24px 16px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.4rem; font-weight: bold; }
+    header p { font-size: 0.85rem; margin-top: 6px; opacity: 0.9; }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      color: var(--orange);
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    /* 台数選択 */
+    .count-row {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .count-row:last-child { border-bottom: none; }
+    .count-label {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .count-label small { display: block; font-size: 0.78rem; font-weight: normal; color: var(--text-light); margin-top: 2px; }
+
+    .count-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .count-opt {
+      flex: 1;
+      min-width: 52px;
+      padding: 10px 4px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .count-opt:hover { border-color: var(--orange); color: var(--orange); }
+    .count-opt.selected { border-color: var(--orange); background: var(--orange); color: white; }
+
+    /* スペック入力 */
+    .spec-group { margin-bottom: 16px; }
+    .spec-group:last-child { margin-bottom: 0; }
+    .spec-label {
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .spec-label span {
+      display: inline-block;
+      background: var(--orange-light);
+      color: var(--orange);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: normal;
+    }
+
+    .radio-group { display: flex; flex-direction: column; gap: 8px; }
+    .radio-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .radio-item:hover { border-color: var(--orange); background: var(--orange-light); }
+    .radio-item input[type="radio"] { margin-top: 2px; accent-color: var(--orange); }
+    .radio-item.selected { border-color: var(--orange); background: var(--orange-light); }
+    .radio-text { font-size: 0.9rem; }
+    .radio-text small { display: block; color: var(--text-light); font-size: 0.78rem; margin-top: 2px; }
+
+    /* 納品時期 */
+    .delivery-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .delivery-btn {
+      padding: 14px 10px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .delivery-btn small { display: block; font-size: 0.72rem; color: var(--text-light); font-weight: normal; margin-top: 4px; }
+    .delivery-btn:hover { border-color: var(--orange); color: var(--orange); }
+    .delivery-btn.selected { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+
+    /* 結果 */
+    #result-section { display: none; }
+
+    .result-total {
+      text-align: center;
+      padding: 24px 0 16px;
+    }
+    .result-label { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+    .result-price {
+      font-size: 2.6rem;
+      font-weight: bold;
+      color: var(--orange);
+      line-height: 1;
+    }
+    .result-price sup { font-size: 1.2rem; margin-right: 4px; }
+    .result-note { font-size: 0.78rem; color: var(--text-light); margin-top: 8px; }
+
+    .result-breakdown {
+      border-top: 1px solid var(--border);
+      margin-top: 16px;
+      padding-top: 16px;
+    }
+    .breakdown-title { font-size: 0.8rem; color: var(--text-light); margin-bottom: 10px; }
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 0.9rem;
+      border-bottom: 1px dashed var(--border);
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-row.total {
+      font-weight: bold;
+      font-size: 1rem;
+      color: var(--orange);
+      border-top: 2px solid var(--orange);
+      border-bottom: none;
+      margin-top: 6px;
+      padding-top: 10px;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn-primary {
+      flex: 1;
+      padding: 14px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-secondary {
+      flex: 1;
+      padding: 14px;
+      background: white;
+      color: var(--orange);
+      border: 2px solid var(--orange);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: var(--orange-light); }
+
+    .copy-msg {
+      text-align: center;
+      color: var(--green);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* 計算ボタン */
+    #calc-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    #calc-btn:hover { opacity: 0.88; }
+    #calc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .warning {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      color: #555;
+      margin-top: 12px;
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      .delivery-grid { grid-template-columns: 1fr; }
+      .result-price { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>クロコ導入 概算見積もり</h1>
+  <p>Claude Code デスクトップ版 インストール支援サービス</p>
+</header>
+
+<main>
+
+  <!-- STEP 1: 台数 -->
+  <div class="section">
+    <div class="section-title">STEP 1 ／ 台数を教えてください（おおよそでOK）</div>
+
+    <div class="count-row">
+      <div class="count-label">
+        Mac
+        <small>macOS 搭載のパソコン</small>
+      </div>
+      <div class="count-options">
+        <button class="count-opt selected" onclick="selectCount('mac', 0, this)">0</button>
+        <button class="count-opt" onclick="selectCount('mac', 10, this)">〜10</button>
+        <button class="count-opt" onclick="selectCount('mac', 30, this)">〜30</button>
+        <button class="count-opt" onclick="selectCount('mac', 50, this)">〜50</button>
+        <button class="count-opt" onclick="selectCount('mac', 99, this)">50以上</button>
+      </div>
+    </div>
+
+    <div class="count-row">
+      <div class="count-label">
+        Windows
+        <small>Windows 搭載のパソコン</small>
+      </div>
+      <div class="count-options">
+        <button class="count-opt selected" onclick="selectCount('win', 0, this)">0</button>
+        <button class="count-opt" onclick="selectCount('win', 10, this)">〜10</button>
+        <button class="count-opt" onclick="selectCount('win', 30, this)">〜30</button>
+        <button class="count-opt" onclick="selectCount('win', 50, this)">〜50</button>
+        <button class="count-opt" onclick="selectCount('win', 99, this)">50以上</button>
+      </div>
+    </div>
+
+    <div class="warning" id="zero-warning">
+      Mac・Windows のいずれかを選択してください。
+    </div>
+  </div>
+
+  <!-- STEP 2: Macスペック -->
+  <div class="section" id="mac-spec-section" style="display:none">
+    <div class="section-title">STEP 2 ／ Mac のスペック（代表的な1台）</div>
+    <div class="spec-group">
+      <div class="spec-label">macOS バージョン <span>最も古いものを選択</span></div>
+      <div class="radio-group" id="mac-os-group">
+        <label class="radio-item">
+          <input type="radio" name="mac-os" value="tahoe_sequoia">
+          <span class="radio-text">Sequoia / Tahoe（最新）<small>アップデート対応不要</small></span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="mac-os" value="sonoma_ventura">
+          <span class="radio-text">Sonoma / Ventura<small>アップデート推奨のご案内あり</small></span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="mac-os" value="old">
+          <span class="radio-text">Monterey 以前 / 不明<small>動作確認・対応が必要な場合あり</small></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Windowsスペック -->
+  <div class="section" id="win-spec-section" style="display:none">
+    <div class="section-title" id="win-step-label">STEP 3 ／ Windows のスペック（代表的な1台）</div>
+    <div class="spec-group">
+      <div class="spec-label">Windows バージョン <span>最も古いものを選択</span></div>
+      <div class="radio-group" id="win-os-group">
+        <label class="radio-item">
+          <input type="radio" name="win-os" value="win11">
+          <span class="radio-text">Windows 11<small>推奨環境</small></span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="win-os" value="win10">
+          <span class="radio-text">Windows 10<small>動作可・アップグレード推奨</small></span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="win-os" value="old">
+          <span class="radio-text">Windows 8 以前 / 不明<small>動作不可の可能性あり・要相談</small></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: 納品時期 -->
+  <div class="section">
+    <div class="section-title" id="delivery-step-label">STEP 2 ／ ご希望の納品時期</div>
+    <div class="delivery-grid">
+      <button class="delivery-btn" onclick="selectDelivery('urgent', this)">
+        1週間以内
+        <small>特急対応</small>
+      </button>
+      <button class="delivery-btn" onclick="selectDelivery('normal', this)">
+        2〜4週間
+        <small>標準対応</small>
+      </button>
+      <button class="delivery-btn" onclick="selectDelivery('flexible', this)">
+        1〜2ヶ月
+        <small>余裕あり</small>
+      </button>
+      <button class="delivery-btn" onclick="selectDelivery('consult', this)">
+        相談したい
+        <small>未定・調整可</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- 計算ボタン -->
+  <button id="calc-btn" onclick="calculate()">概算を見る</button>
+
+  <!-- 結果 -->
+  <div class="section" id="result-section">
+    <div class="section-title">概算見積もり結果</div>
+
+    <div class="result-total">
+      <div class="result-label">合計（税込）</div>
+      <div class="result-price">
+        <sup>¥</sup><span id="result-total-price">0</span>
+      </div>
+      <div class="result-note">※ あくまで概算です。正式なお見積もりは別途ご連絡いたします。</div>
+    </div>
+
+    <div class="result-breakdown">
+      <div class="breakdown-title">内訳</div>
+      <div id="breakdown-body"></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="copyResult()">内容をコピー</button>
+      <button class="btn-primary" onclick="requestQuote()">正式見積もりを依頼</button>
+    </div>
+    <div class="copy-msg" id="copy-msg">コピーしました！</div>
+  </div>
+
+</main>
+
+<script>
+  // =============================================
+  // 料金設定（ここを変更するだけで金額が変わります）
+  // =============================================
+  const PRICE = {
+    mac_per_unit: 30000,      // Mac 1台あたり（税抜）
+    win_per_unit: 25000,      // Windows 1台あたり（税抜）
+    urgent_surcharge: 0.30,   // 特急割増（30%）
+    flexible_discount: 0.00,  // 余裕あり割引（現在なし）
+    old_os_surcharge: 5000,   // 古いOS 追加対応費（1台あたり）
+    tax_rate: 0.10,           // 消費税
+  };
+  // =============================================
+
+  const state = {
+    mac: 0,
+    win: 0,
+    macOs: null,
+    winOs: null,
+    delivery: null,
+  };
+
+  // 台数選択
+  function selectCount(type, val, btn) {
+    // 同じグループのボタンの選択解除
+    btn.closest('.count-options').querySelectorAll('.count-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state[type] = val;
+
+    // スペックセクションの表示制御
+    document.getElementById('mac-spec-section').style.display = state.mac > 0 ? 'block' : 'none';
+    document.getElementById('win-spec-section').style.display = state.win > 0 ? 'block' : 'none';
+
+    // STEPナンバー更新
+    updateStepNumbers();
+  }
+
+  function updateStepNumbers() {
+    let step = 2;
+    if (state.mac > 0) {
+      document.querySelector('#mac-spec-section .section-title').textContent = `STEP ${step} ／ Mac のスペック（代表的な1台）`;
+      step++;
+    }
+    if (state.win > 0) {
+      document.querySelector('#win-spec-section .section-title').textContent = `STEP ${step} ／ Windows のスペック（代表的な1台）`;
+      step++;
+    }
+    document.getElementById('delivery-step-label').textContent = `STEP ${step} ／ ご希望の納品時期`;
+  }
+
+  // スペック選択
+  document.querySelectorAll('.radio-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const radio = item.querySelector('input[type="radio"]');
+      const name = radio.name;
+      document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.closest('.radio-item').classList.remove('selected');
+      });
+      item.classList.add('selected');
+      if (name === 'mac-os') state.macOs = radio.value;
+      if (name === 'win-os') state.winOs = radio.value;
+    });
+  });
+
+  // 納品時期選択
+  function selectDelivery(val, btn) {
+    document.querySelectorAll('.delivery-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.delivery = val;
+  }
+
+  // 概算計算
+  function calculate() {
+    // バリデーション
+    if (state.mac === 0 && state.win === 0) {
+      document.getElementById('zero-warning').style.display = 'block';
+      return;
+    }
+    document.getElementById('zero-warning').style.display = 'none';
+
+    if (!state.delivery) {
+      alert('納品時期を選択してください。');
+      return;
+    }
+
+    // 計算
+    let macBase = state.mac * PRICE.mac_per_unit;
+    let winBase = state.win * PRICE.win_per_unit;
+
+    // 古いOS追加費
+    let macOsSurcharge = (state.mac > 0 && state.macOs === 'old') ? state.mac * PRICE.old_os_surcharge : 0;
+    let winOsSurcharge = (state.win > 0 && state.winOs === 'old') ? state.win * PRICE.old_os_surcharge : 0;
+
+    let subtotal = macBase + winBase + macOsSurcharge + winOsSurcharge;
+
+    // 納品時期割増
+    let surcharge = 0;
+    if (state.delivery === 'urgent') surcharge = subtotal * PRICE.urgent_surcharge;
+
+    let beforeTax = subtotal + surcharge;
+    let tax = Math.floor(beforeTax * PRICE.tax_rate);
+    let total = beforeTax + tax;
+
+    // 内訳を生成
+    let rows = [];
+    if (state.mac > 0) rows.push([`Mac インストール支援（${state.mac}台）`, macBase]);
+    if (state.win > 0) rows.push([`Windows インストール支援（${state.win}台）`, winBase]);
+    if (macOsSurcharge > 0) rows.push([`Mac OS 追加対応費（${state.mac}台）`, macOsSurcharge]);
+    if (winOsSurcharge > 0) rows.push([`Windows OS 追加対応費（${state.win}台）`, winOsSurcharge]);
+    if (surcharge > 0) rows.push([`特急対応割増（30%）`, surcharge]);
+    rows.push(['消費税（10%）', tax]);
+
+    let html = rows.map(([label, amount]) =>
+      `<div class="breakdown-row"><span>${label}</span><span>¥${amount.toLocaleString()}</span></div>`
+    ).join('');
+    html += `<div class="breakdown-row total"><span>合計（税込）</span><span>¥${total.toLocaleString()}</span></div>`;
+
+    document.getElementById('breakdown-body').innerHTML = html;
+    document.getElementById('result-total-price').textContent = total.toLocaleString();
+
+    document.getElementById('result-section').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  // コピー
+  function copyResult() {
+    const mac = state.mac === 99 ? '50以上' : state.mac === 0 ? '0' : '〜' + state.mac;
+    const win = state.win === 99 ? '50以上' : state.win === 0 ? '0' : '〜' + state.win;
+    const delivery = { urgent: '1週間以内', normal: '2〜4週間', flexible: '1〜2ヶ月', consult: '相談' }[state.delivery];
+    const total = document.getElementById('result-total-price').textContent;
+
+    const text = [
+      '【クロコ導入 概算見積もり】',
+      '',
+      `Mac: ${mac}台`,
+      `Windows: ${win}台`,
+      state.mac > 0 ? `MacOS: ${{ tahoe_sequoia: 'Sequoia/Tahoe', sonoma_ventura: 'Sonoma/Ventura', old: 'Monterey以前' }[state.macOs] || '未選択'}` : null,
+      state.win > 0 ? `WindowsOS: ${{ win11: 'Windows 11', win10: 'Windows 10', old: 'Windows 8以前' }[state.winOs] || '未選択'}` : null,
+      `納品希望: ${delivery}`,
+      '',
+      `概算合計（税込）: ¥${total}`,
+      '',
+      '※ あくまで概算です。正式なお見積もりは別途ご連絡ください。',
+    ].filter(Boolean).join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('copy-msg').style.display = 'block';
+      setTimeout(() => document.getElementById('copy-msg').style.display = 'none', 2500);
+    });
+  }
+
+  // 正式見積もり依頼（リンク先は後で設定）
+  function requestQuote() {
+    alert('正式見積もりのご依頼は\nmiidacnt@gmail.com までご連絡ください。');
+  }
+</script>
+</body>
+</html>
