@@ -237,6 +237,38 @@
     .option-price.save { color: var(--save-color); }
     .option-price.add { color: var(--blue); }
 
+    /* ===== 研修人数 ===== */
+    .training-people {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+    .training-people.visible { display: block; }
+    .training-people-label {
+      font-size: 0.82rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .people-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .people-btn {
+      flex: 1;
+      min-width: 70px;
+      padding: 8px 4px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      font-size: 0.82rem;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .people-btn:hover { border-color: var(--green); color: var(--save-color); }
+    .people-btn.selected { border-color: var(--green); background: var(--green); color: white; }
+
     /* ===== 内訳 ===== */
     .breakdown { margin-top: 0; }
     .breakdown-row {
@@ -462,7 +494,19 @@
       <div class="option-body">
         <div class="option-name">研修セット</div>
         <div class="option-desc">導入後に使い方研修を実施（2時間・オンライン）。<br>セットにすると個別手配より割安になります。</div>
-        <div class="option-price add" id="opt-training-price">+ ¥50,000（税抜）</div>
+        <div class="option-price add" id="opt-training-price">+ ¥50,000〜（税抜）</div>
+
+        <!-- 研修人数（研修OFFでも表示を維持してクリック伝播を止める） -->
+        <div class="training-people" id="training-people">
+          <div class="training-people-label">研修の参加人数を教えてください</div>
+          <div class="people-btns">
+            <button class="people-btn selected" onclick="setPeople(5, this); event.stopPropagation();">〜5人</button>
+            <button class="people-btn" onclick="setPeople(10, this); event.stopPropagation();">〜10人</button>
+            <button class="people-btn" onclick="setPeople(30, this); event.stopPropagation();">〜30人</button>
+            <button class="people-btn" onclick="setPeople(50, this); event.stopPropagation();">〜50人</button>
+            <button class="people-btn" onclick="setPeople(99, this); event.stopPropagation();">50人以上</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -505,11 +549,14 @@
     win_per_unit:        25000,  // Windows 1台（税抜）
     old_os_per_unit:      5000,  // 古いOS追加対応 1台（税抜）
     urgent_rate:          0.30,  // 特急割増率
-    option_training:     50000,  // 研修セット（税抜）
+    option_training_base:30000,  // 研修セット 基本料金（税抜）
+    option_training_per:  3000,  // 研修 1人あたり追加（税抜）
     option_support:      30000,  // チャットサポート3ヶ月（税抜）
     tax_rate:             0.10,  // 消費税率
     // 台数の代表値（「〜10」なら10台として計算）
     unit_map: { 0:0, 10:10, 30:30, 50:50, 99:60 },
+    // 研修人数の代表値
+    people_map: { 5:5, 10:10, 30:30, 50:50, 99:60 },
   };
   // =============================================
 
@@ -518,6 +565,7 @@
     macOs: 'new', winOs: 'new',
     delivery: 'normal',
     training: false, support: false,
+    trainingPeople: 5,   // 研修参加人数（デフォルト〜5人）
   };
 
   // 初期選択を「2〜4週間」に設定
@@ -552,6 +600,14 @@
     recalc();
   }
 
+  // ===== 研修人数 =====
+  function setPeople(val, btn) {
+    document.querySelectorAll('.people-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.trainingPeople = val;
+    recalc();
+  }
+
   // ===== オプション =====
   function toggleOption(key) {
     state[key] = !state[key];
@@ -563,6 +619,11 @@
     } else {
       item.classList.remove('selected');
       check.textContent = '';
+    }
+    // 研修セットの人数選択を表示/非表示
+    if (key === 'training') {
+      const peopleEl = document.getElementById('training-people');
+      peopleEl.classList.toggle('visible', state.training);
     }
     recalc();
   }
@@ -580,7 +641,17 @@
 
     const base = macBase + winBase + macOsAdd + winOsAdd;
     const urgentAdd = state.delivery === 'urgent' ? Math.floor(base * PRICE.urgent_rate) : 0;
-    const optTraining = state.training ? PRICE.option_training : 0;
+    const trainingPeople = PRICE.people_map[state.trainingPeople] || 5;
+    const optTraining = state.training
+      ? PRICE.option_training_base + trainingPeople * PRICE.option_training_per
+      : 0;
+    // 価格ラベル更新
+    if (state.training) {
+      document.getElementById('opt-training-price').textContent =
+        `+ ${fmt(optTraining)}（税抜）／ ${trainingPeople}人`;
+    } else {
+      document.getElementById('opt-training-price').textContent = '+ ¥30,000〜（税抜）';
+    }
     const optSupport  = state.support  ? PRICE.option_support  : 0;
 
     const beforeTax = base + urgentAdd + optTraining + optSupport;
@@ -617,7 +688,10 @@
     if (macOsAdd > 0) rows += row(`Mac 古いOS追加対応（${macUnits}台）`, macOsAdd);
     if (winOsAdd > 0) rows += row(`Win 古いOS追加対応（${winUnits}台）`, winOsAdd);
     if (urgentAdd > 0) rows += row('特急対応割増（+30%）', urgentAdd);
-    if (optTraining > 0) rows += row('研修セット', optTraining);
+    if (optTraining > 0) {
+      const tp = PRICE.people_map[state.trainingPeople] || 5;
+      rows += row(`研修セット（${tp}人）`, optTraining);
+    }
     if (optSupport  > 0) rows += row('チャットサポート 3ヶ月', optSupport);
     rows += row('消費税（10%）', tax);
     rows += row('合計（税込）', total, 'total-row');
@@ -677,7 +751,7 @@
       `Windows: ${winLabel}`,
       state.win > 0 ? `WindowsOS: ${osLabels[state.winOs]}` : null,
       `納品希望: ${delLabels[state.delivery]}`,
-      state.training ? 'オプション: 研修セット' : null,
+      state.training ? `オプション: 研修セット（参加人数 〜${PRICE.people_map[state.trainingPeople]}人）` : null,
       state.support  ? 'オプション: チャットサポート（3ヶ月）' : null,
       '',
       `概算合計（税込）: ¥${total}`,
